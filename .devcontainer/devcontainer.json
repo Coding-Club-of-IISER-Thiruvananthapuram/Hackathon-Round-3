@@ -1,0 +1,12 @@
+{
+  "name": "Clash Royale AI Arena",
+  "image": "mcr.microsoft.com/devcontainers/python:3.11",
+  "forwardPorts": [8000],
+  "portsAttributes": {
+    "8000": {
+      "label": "Arena Web UI",
+      "onAutoForward": "openBrowser"
+    }
+  },
+  "postCreateCommand": "bash setup_environment.sh || true"
+}

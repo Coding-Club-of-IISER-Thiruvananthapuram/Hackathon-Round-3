@@ -1,0 +1,1583 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ROYAL ARENA ESPORTS // 1v1 Autonomous Clash Championship</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;800;900&family=JetBrains+Mono:wght@500;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/three.min.js"></script>
+  <script src="/static/OrbitControls.js"></script>
+  <script src="/static/lucide.min.js"></script>
+</head>
+<body class="clash-dark">
+
+  <!-- TOP ESPORTS COMMAND BAR -->
+  <header class="command-bar">
+    <div class="brand">
+      <div class="brand-crest-wrapper">
+        <i data-lucide="swords" class="brand-crown-icon"></i>
+      </div>
+      <div class="brand-text">
+        <span class="brand-title">AUTONOMOUS ARENA</span>
+        <span class="brand-subtitle">HACKATHON STRATEGY SHOWDOWN</span>
+      </div>
+    </div>
+
+    <!-- Navigation Tabs -->
+    <nav class="nav-tabs" id="mainNavTabs">
+      <button class="nav-tab active" id="btnViewLobby"><i data-lucide="layout-grid"></i> FORGE</button>
+      <button class="nav-tab" id="btnViewArena"><i data-lucide="shield"></i> ARENA</button>
+      <button class="nav-tab" id="btnViewBracket"><i data-lucide="trophy"></i> BRACKET</button>
+      <button class="nav-tab" id="btnViewRules"><i data-lucide="book-open"></i> RULES</button>
+    </nav>
+
+    <!-- CENTER ESPORTS BATTLE HUD (Strategy vs Strategy & Live Telemetry) -->
+    <div class="esports-top-hud" id="esportsTopHud">
+      <div class="hud-matchup-row">
+        <span class="hud-team-name team-red-text" id="hudRedName">RED STRATEGY</span>
+        <span class="hud-vs-tag">VS</span>
+        <span class="hud-team-name team-blue-text" id="hudBlueName">BLUE STRATEGY</span>
+      </div>
+      <div class="hud-telemetry-row">
+        <span class="hud-timer-badge">
+          <i data-lucide="timer"></i> <span id="matchTimer">03:00</span>
+        </span>
+        <span class="hud-live-badge" id="hudLiveBadge">
+          <span class="live-pulse-dot"></span>
+          <span id="hudLiveText">LIVE MATCH</span>
+        </span>
+        <div class="crown-score-badge" id="crownScoreBadge">
+          <span class="crown-red">🔴 <strong id="scoreRedCrowns">0</strong></span>
+          <span class="score-dash">:</span>
+          <span class="crown-blue"><strong id="scoreBlueCrowns">0</strong> 🔵</span>
+        </div>
+        <div class="match-status-badge" id="matchStatusBadge">STANDBY</div>
+      </div>
+    </div>
+
+    <!-- Spectator & Battle Controls -->
+    <div class="controls-cluster">
+      <div class="speed-control">
+        <button class="speed-btn active" data-speed="1.0">1x</button>
+        <button class="speed-btn" data-speed="2.0">2x</button>
+        <button class="speed-btn" data-speed="4.0">4x</button>
+      </div>
+
+      <button id="btnStart" class="btn-primary"><i data-lucide="play"></i> START</button>
+      <button id="btnPause" class="btn-secondary" disabled><i data-lucide="pause"></i> PAUSE</button>
+      <button id="btnStep" class="btn-secondary" title="Advance 1 Tick"><i data-lucide="step-forward"></i> STEP</button>
+      <button id="btnReset" class="btn-danger" title="Reset Match"><i data-lucide="rotate-ccw"></i> RESET</button>
+      
+      <!-- Developer / Debug Inspector Toggle -->
+      <button id="btnToggleDebug" class="btn-debug-toggle" title="Toggle Developer Telemetry Mode">
+        <i data-lucide="terminal"></i> DEBUG
+      </button>
+
+      <div class="audio-control-group">
+        <button id="btnSound" class="btn-icon" title="Toggle Sound"><i data-lucide="volume-2" id="soundIcon"></i></button>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.05" value="0.75" class="vol-slider" title="Master Volume">
+      </div>
+    </div>
+  </header>
+
+  <!-- ============================================================== -->
+  <!-- VIEW 1: MATCH SETUP & LOBBY                                    -->
+  <!-- ============================================================== -->
+  <section class="view-panel active" id="viewLobby">
+    <div class="lobby-wrapper">
+      
+      <div class="lobby-headline">
+        <div class="headline-badge">CHAMPIONSHIP MATCHMAKING</div>
+        <h1>SELECT YOUR BATTLE DECKS</h1>
+        <p>Choose from tournament-tested archetypes or upload custom combat dossiers (.md) to deploy your autonomous commander.</p>
+      </div>
+
+      <!-- Red vs Blue Matchup Grid -->
+      <div class="matchup-grid">
+        
+        <!-- RED PLAYER CARD -->
+        <div class="combatant-card red-card">
+          <div class="card-tag red-tag">
+            <span class="tag-dot"></span>
+            RED COMMANDER // NORTH BASTION
+          </div>
+
+          <!-- Dropzone -->
+          <div class="file-dropzone red-drop" id="dropzoneRed" title="Upload Custom Deck Dossier">
+            <input type="file" id="fileInputRed" accept=".md,.txt" class="file-input-hidden">
+            <div class="dropzone-body">
+              <span class="drop-icon"><i data-lucide="file-text"></i></span>
+              <div class="drop-text">
+                <strong>Upload Red Strategy Dossier</strong>
+                <small>Drop custom .md or .txt deck file</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Profile Pill -->
+          <div class="profile-pill" id="pillRedSkill">
+            <div class="pill-crest"><i data-lucide="crown"></i></div>
+            <div class="pill-text">
+              <strong id="pillRedName">Hog Rider 2.6 Cycle</strong>
+              <small id="pillRedSub">The Hog Master • HOG CYCLE</small>
+            </div>
+            <span class="pill-badge pill-red-badge">Active</span>
+          </div>
+
+          <!-- Preset Dropdown -->
+          <div class="preset-select-group">
+            <label>Or select tournament deck:</label>
+            <select id="selectRedSkill" class="skill-dropdown"></select>
+          </div>
+
+          <!-- 8-Card Preview -->
+          <div class="deck-preview-label">8-CARD COMBAT ROSTER</div>
+          <div class="deck-preview-strip" id="redDeckPreview">
+            <!-- Cards populated dynamically -->
+          </div>
+        </div>
+
+        <!-- CENTER VS & START -->
+        <div class="matchup-center-actions">
+          <div class="vs-emblem">VS</div>
+          
+          <div class="timer-picker">
+            <label><i data-lucide="clock"></i> Regulation Time:</label>
+            <select id="selectTimer">
+              <option value="120">2 Minutes (Rapid Blitz)</option>
+              <option value="180" selected>3 Minutes (Championship Standard)</option>
+              <option value="300">5 Minutes (Extended War)</option>
+            </select>
+          </div>
+
+          <button id="btnLockAndStart" class="btn-lock-start glow-gold">
+            <i data-lucide="swords"></i> COMMENCE BATTLE <i data-lucide="play"></i>
+          </button>
+          
+          <div class="center-rules-card">
+            <div class="rule-line"><i data-lucide="crown"></i> King Tower Fall = Instant 3-Crown KO</div>
+            <div class="rule-line"><i data-lucide="zap"></i> Double Elixir in final 60 seconds</div>
+            <div class="rule-line"><i data-lucide="hourglass"></i> Sudden Death Overtime if tied</div>
+          </div>
+        </div>
+
+        <!-- BLUE PLAYER CARD -->
+        <div class="combatant-card blue-card">
+          <div class="card-tag blue-tag">
+            <span class="tag-dot"></span>
+            BLUE COMMANDER // SOUTH FORTRESS
+          </div>
+
+          <!-- Dropzone -->
+          <div class="file-dropzone blue-drop" id="dropzoneBlue" title="Upload Custom Deck Dossier">
+            <input type="file" id="fileInputBlue" accept=".md,.txt" class="file-input-hidden">
+            <div class="dropzone-body">
+              <span class="drop-icon"><i data-lucide="file-text"></i></span>
+              <div class="drop-text">
+                <strong>Upload Blue Strategy Dossier</strong>
+                <small>Drop custom .md or .txt deck file</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Active Profile Pill -->
+          <div class="profile-pill" id="pillBlueSkill">
+            <div class="pill-crest"><i data-lucide="crown"></i></div>
+            <div class="pill-text">
+              <strong id="pillBlueName">Giant Beatdown Heavy</strong>
+              <small id="pillBlueSub">Mountain King • BEATDOWN</small>
+            </div>
+            <span class="pill-badge pill-blue-badge">Active</span>
+          </div>
+
+          <!-- Preset Dropdown -->
+          <div class="preset-select-group">
+            <label>Or select tournament deck:</label>
+            <select id="selectBlueSkill" class="skill-dropdown"></select>
+          </div>
+
+          <!-- 8-Card Preview -->
+          <div class="deck-preview-label">8-CARD COMBAT ROSTER</div>
+          <div class="deck-preview-strip" id="blueDeckPreview">
+            <!-- Cards populated dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================================== -->
+      <!-- 4.1 SCHEMA DEFINITION & STRATEGY DOSSIER BLUEPRINT             -->
+      <!-- ============================================================== -->
+      <div class="schema-definition-card" id="schemaDefinitionCard">
+        
+        <!-- Header with Title, Anchor, and Action Cluster -->
+        <div class="schema-header">
+          <div class="schema-header-left">
+            <div class="schema-tag">
+              <span class="tag-status-dot"></span>
+              <span>OFFICIAL DOSSIER SPECIFICATION // CLASH AUTONOMOUS ARENA</span>
+            </div>
+            <h2 class="schema-title">
+              <i data-lucide="link" class="schema-anchor-icon"></i> 4.1 Schema Definition
+            </h2>
+            <p class="schema-subtitle">A valid skill file must contain the following sections:</p>
+          </div>
+
+          <div class="schema-header-actions">
+            <button class="schema-action-btn" id="btnCopySchema" title="Copy Blank 4.1 Schema Template">
+              <i data-lucide="copy"></i> <span id="copySchemaBtnText">Copy Template</span>
+            </button>
+            <button class="schema-action-btn" id="btnCopyExample" title="Copy Working Reference Deck (Royal Vanguard)">
+              <i data-lucide="file-text"></i> <span id="copyExampleBtnText">Copy Example</span>
+            </button>
+            <button class="schema-action-btn btn-action-accent" id="btnLoadSchemaToForge" title="Load into Live Dossier Forge">
+              <i data-lucide="sparkles"></i> <span>Open in Forge</span>
+            </button>
+            <button class="schema-action-btn" id="btnDownloadSchema" title="Download .md template file">
+              <i data-lucide="download"></i> <span>Download .md</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Schema Sub-Navigation Bar -->
+        <div class="schema-subnav">
+          <button class="schema-tab active" data-schematab="blueprint">
+            <i data-lucide="code-2"></i> CODE BLUEPRINT
+          </button>
+          <button class="schema-tab" data-schematab="breakdown">
+            <i data-lucide="layers"></i> 5 MANDATORY SECTIONS
+          </button>
+          <button class="schema-tab" data-schematab="cards">
+            <i data-lucide="layout-grid"></i> 10 CATALOG CARDS
+          </button>
+        </div>
+
+        <!-- SUB-PANEL 1: CODE BLUEPRINT (Faithfully matching image) -->
+        <div class="schema-panel active" id="panelSchemaBlueprint">
+          <div class="code-window">
+            <div class="code-window-bar">
+              <div class="window-dots">
+                <span class="w-dot red"></span>
+                <span class="w-dot yellow"></span>
+                <span class="w-dot green"></span>
+              </div>
+              <span class="code-window-filename"><i data-lucide="file-code"></i> skill_dossier_schema.md</span>
+              <button class="code-copy-btn" id="btnCodeWindowCopy" title="Copy Markdown">
+                <i data-lucide="copy"></i>
+              </button>
+            </div>
+            
+            <pre class="schema-code-block"><code><span class="c-header"># Deck Name: <span class="c-param">&lt;Kingdom / Commander Title&gt;</span></span>
+<span class="c-header"># Player / Author: <span class="c-param">&lt;Team Name&gt;</span></span>
+<span class="c-header"># War Cry: <span class="c-string">"&lt;Short Custom Battle Cry&gt;"</span></span>
+
+<span class="c-section">## Archetype &amp; Playstyle</span>
+<span class="c-body">&lt;Brief description of strategic doctrine: cycle, beatdown, spell_bait...&gt;</span>
+
+<span class="c-section">## 8-Card Battle Deck</span>
+<span class="c-bullet">- &lt;card_id_1&gt;: &lt;weight_percentage&gt;%</span>
+<span class="c-bullet">- &lt;card_id_2&gt;: &lt;weight_percentage&gt;%</span>
+<span class="c-bullet">- &lt;card_id_3&gt;: &lt;weight_percentage&gt;%</span>
+<span class="c-bullet">- &lt;card_id_4&gt;: &lt;weight_percentage&gt;%</span>
+<span class="c-bullet">- &lt;card_id_5&gt;: &lt;weight_percentage&gt;%</span>
+<span class="c-bullet">- &lt;card_id_6&gt;: &lt;weight_percentage&gt;%</span>
+<span class="c-bullet">- &lt;card_id_7&gt;: &lt;weight_percentage&gt;%</span>
+<span class="c-bullet">- &lt;card_id_8&gt;: &lt;weight_percentage&gt;%</span>
+
+<span class="c-section">## Preferred Lane</span>
+<span class="c-body">&lt;"left", "right", or "balanced"&gt;</span>
+
+<span class="c-section">## Tactical Triggers (If-Then Rules)</span>
+<span class="c-trigger"><span class="c-num">1.</span> <span class="c-if">IF</span> &lt;Condition&gt; <span class="c-arrow">-&gt;</span> &lt;Action&gt;!</span>
+<span class="c-trigger"><span class="c-num">2.</span> <span class="c-if">IF</span> &lt;Condition&gt; <span class="c-arrow">-&gt;</span> &lt;Action&gt;!</span>
+<span class="c-trigger"><span class="c-num">3.</span> <span class="c-if">IF</span> &lt;Condition&gt; <span class="c-arrow">-&gt;</span> &lt;Action&gt;!</span>
+<span class="c-trigger"><span class="c-num">4.</span> <span class="c-if">IF</span> &lt;Condition&gt; <span class="c-arrow">-&gt;</span> &lt;Action&gt;!</span></code></pre>
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 2: 5 MANDATORY SECTIONS INTERACTIVE GUIDE -->
+        <div class="schema-panel" id="panelSchemaBreakdown">
+          <div class="spec-breakdown-grid">
+            
+            <div class="spec-item-card">
+              <div class="spec-num-badge">01</div>
+              <div class="spec-item-content">
+                <h4><i data-lucide="crown"></i> Header Metadata</h4>
+                <p>Declares deck identity, commander name, and battle war cry shouted during entrance and tower destructions.</p>
+                <div class="spec-tags">
+                  <code># Deck Name: &lt;Title&gt;</code>
+                  <code># Player / Author: &lt;Team&gt;</code>
+                  <code># War Cry: "&lt;Battle Cry&gt;"</code>
+                </div>
+              </div>
+            </div>
+
+            <div class="spec-item-card">
+              <div class="spec-num-badge">02</div>
+              <div class="spec-item-content">
+                <h4><i data-lucide="compass"></i> Archetype &amp; Playstyle</h4>
+                <p>Governs overall aggression cadence, elixir threshold holding, and bridgehead counter-pushing.</p>
+                <div class="spec-archetype-chips">
+                  <span class="spec-pill arch-cycle">🐗 cycle</span>
+                  <span class="spec-pill arch-beatdown">🗿 beatdown</span>
+                  <span class="spec-pill arch-bait">🪵 spell_bait</span>
+                  <span class="spec-pill arch-pekka">🤖 pekka_control</span>
+                  <span class="spec-pill arch-bridge">⚡ bridge_spam</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="spec-item-card">
+              <div class="spec-num-badge">03</div>
+              <div class="spec-item-content">
+                <h4><i data-lucide="layers"></i> 8-Card Battle Deck</h4>
+                <p>Must specify exactly 8 distinct card IDs from the catalog with percentage weights totaling 100%.</p>
+                <div class="spec-tags">
+                  <code>- &lt;card_id&gt;: &lt;weight&gt;%</code>
+                  <span class="spec-pill text-gold">Exactly 8 cards</span>
+                  <span class="spec-pill text-green">Weights sum to 100%</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="spec-item-card">
+              <div class="spec-num-badge">04</div>
+              <div class="spec-item-content">
+                <h4><i data-lucide="git-fork"></i> Preferred Lane</h4>
+                <p>Sets tactical lane bias: left bridge pressure, right bridge pressure, or dynamic balanced adaptation.</p>
+                <div class="spec-tags">
+                  <span class="spec-pill">"left"</span>
+                  <span class="spec-pill">"right"</span>
+                  <span class="spec-pill">"balanced"</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="spec-item-card full-width">
+              <div class="spec-num-badge">05</div>
+              <div class="spec-item-content">
+                <h4><i data-lucide="zap"></i> Tactical Triggers (If-Then Rules)</h4>
+                <p>Real-time autonomous conditional triggers evaluated on every 1.0s tick to trigger instant tactical responses.</p>
+                <div class="spec-rule-examples">
+                  <div class="rule-ex-row">
+                    <span class="r-badge-cond">IF CONDITION</span>
+                    <code>Elixir &gt;= 7</code>
+                    <i data-lucide="arrow-right" class="r-arrow"></i>
+                    <span class="r-badge-act">THEN ACTION</span>
+                    <code>Deploy Giant at bridge!</code>
+                  </div>
+                  <div class="rule-ex-row">
+                    <span class="r-badge-cond">IF CONDITION</span>
+                    <code>Enemy drops a heavy tank</code>
+                    <i data-lucide="arrow-right" class="r-arrow"></i>
+                    <span class="r-badge-act">THEN ACTION</span>
+                    <code>Deploy Skeletons and Musketeer on that lane!</code>
+                  </div>
+                  <div class="rule-ex-row">
+                    <span class="r-badge-cond">IF CONDITION</span>
+                    <code>Enemy Princess Tower HP &lt; 380</code>
+                    <i data-lucide="arrow-right" class="r-arrow"></i>
+                    <span class="r-badge-act">THEN ACTION</span>
+                    <code>Cast Fireball directly onto the tower!</code>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SUB-PANEL 3: 10 CATALOG CARDS DIRECTORY -->
+        <div class="schema-panel" id="panelSchemaCards">
+          <div class="catalog-reference-grid">
+            <div class="catalog-ref-card">
+              <span class="c-elixir">3 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🗡️ Knight</strong>
+                <code>knight</code>
+                <small>Melee Brawler (850 HP, 95 DMG)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">3 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🏹 Archers</strong>
+                <code>archers</code>
+                <small>Ranged Dual Support (280 HP, 55 DMG)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">5 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🗿 Giant</strong>
+                <code>giant</code>
+                <small>Heavy Siege Tank (2000 HP, Tower Target)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">4 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🎯 Musketeer</strong>
+                <code>musketeer</code>
+                <small>Long-Range Sharpshooter (400 HP, 110 DMG)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">4 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🐗 Hog Rider</strong>
+                <code>hog_rider</code>
+                <small>Fast Bridge Rusher (900 HP, 130 DMG)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">2 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>💀 Skeletons</strong>
+                <code>skeletons</code>
+                <small>Swarm Distraction (80 HP, 40 DMG)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">4 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🐲 Baby Dragon</strong>
+                <code>baby_dragon</code>
+                <small>Flying Splash Aerial (650 HP, 75 DMG)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">7 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🤖 P.E.K.K.A</strong>
+                <code>pekka</code>
+                <small>Armored Juggernaut (2200 HP, 380 DMG)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">4 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🔥 Fireball</strong>
+                <code>fireball</code>
+                <small>Area Spell Blast (380 DMG, Instant Area)</small>
+              </div>
+            </div>
+            <div class="catalog-ref-card">
+              <span class="c-elixir">3 <i data-lucide="droplet"></i></span>
+              <div class="c-info">
+                <strong>🪵 Goblin Barrel</strong>
+                <code>goblin_barrel</code>
+                <small>Tower Infiltration Swarm (3 Goblins, 60 DMG)</small>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- TACTICAL DECK FORGE & STRATEGY STUDIO -->
+      <div class="quick-creator-card" id="deckForgeStudio">
+        
+        <div class="creator-header">
+          <div class="creator-header-top">
+            <h3><i data-lucide="hammer"></i> TACTICAL DECK FORGE // STRATEGY STUDIO</h3>
+            <div class="forge-mode-toggle">
+              <button class="forge-mode-btn active" id="btnModeRapid"><i data-lucide="sliders"></i> Rapid Builder</button>
+              <button class="forge-mode-btn" id="btnModeEditor"><i data-lucide="file-edit"></i> Schema Code Editor &amp; Validator</button>
+            </div>
+          </div>
+          <p>Assemble a custom combat doctrine according to the 4.1 Schema Definition and immediately deploy it into the tournament roster.</p>
+        </div>
+
+        <!-- MODE 1: RAPID BUILDER -->
+        <div class="creator-form" id="forgeRapidForm">
+          <div class="form-item">
+            <label>Deck Title</label>
+            <input type="text" id="builderKingdomName" value="Royal Vanguard Blitz" placeholder="e.g. Royal Vanguard Blitz">
+          </div>
+          <div class="form-item">
+            <label>Commander Name</label>
+            <input type="text" id="builderRulerName" value="Commander Valerius" placeholder="e.g. Commander Valerius">
+          </div>
+          <div class="form-item">
+            <label>Tactical Archetype</label>
+            <select id="builderStrategy">
+              <option value="hog_cycle">🐗 Hog Cycle (Low Elixir, Relentless Bridge Pressure)</option>
+              <option value="beatdown">🗿 Giant Beatdown (Massive Tank with Snipers Behind)</option>
+              <option value="spell_bait">🪵 Spell Bait (Force Out Spells with Swarms &amp; Barrels)</option>
+              <option value="pekka_control">🤖 P.E.K.K.A Iron Defense (Heavy Counter-Pushing)</option>
+              <option value="bridge_spam">⚡ Dual-Lane Bridge Spam (Relentless Split-Lane Blitz)</option>
+            </select>
+          </div>
+          <div class="form-item">
+            <label>Primary Flank</label>
+            <select id="builderLane">
+              <option value="balanced">Adaptive Flank (Responds to Opponent)</option>
+              <option value="left">Left Bridge Focus</option>
+              <option value="right">Right Bridge Focus</option>
+            </select>
+          </div>
+          <button id="btnBuildSkill" class="btn-build-skill">
+            <i data-lucide="sparkles"></i> Forge &amp; Register Deck
+          </button>
+        </div>
+
+        <!-- MODE 2: SCHEMA CODE EDITOR & LIVE VALIDATOR -->
+        <div class="forge-editor-wrapper" id="forgeEditorWrapper" style="display: none;">
+          <div class="forge-editor-toolbar">
+            <span class="editor-label"><i data-lucide="code"></i> RAW STRATEGY DOSSIER (.MD)</span>
+            <div class="editor-quick-actions">
+              <button class="btn-editor-action" id="btnEditorLoadTemplate"><i data-lucide="refresh-cw"></i> Load Template</button>
+              <button class="btn-editor-action" id="btnEditorLoadExample"><i data-lucide="file-text"></i> Load Example Deck</button>
+              <button class="btn-editor-action" id="btnEditorValidate"><i data-lucide="check-circle-2"></i> Validate Schema</button>
+            </div>
+          </div>
+          <textarea id="forgeCustomMarkdown" class="forge-markdown-textarea" spellcheck="false" placeholder="Write or paste your 4.1 Schema markdown skill dossier here..."></textarea>
+          
+          <!-- Validation Feedback Box -->
+          <div class="validation-feedback-box" id="validationFeedbackBox" style="display: none;">
+            <div class="val-header">
+              <span class="val-badge" id="valStatusBadge">VALID</span>
+              <span class="val-title" id="valStatusTitle">Schema Verification Results</span>
+            </div>
+            <div class="val-checklist" id="valChecklist">
+              <!-- Checklist populated dynamically -->
+            </div>
+          </div>
+
+          <div class="forge-editor-actions">
+            <div class="form-item inline-filename">
+              <label>Filename:</label>
+              <input type="text" id="forgeCustomFilename" value="my_custom_doctrine.md" placeholder="e.g. my_custom_doctrine.md">
+            </div>
+            <div class="forge-deploy-buttons">
+              <button id="btnSaveCustomSkill" class="btn-editor-deploy btn-save-lib">
+                <i data-lucide="save"></i> Save to Library
+              </button>
+              <button id="btnDeployCustomRed" class="btn-editor-deploy btn-deploy-red">
+                <i data-lucide="shield"></i> Save &amp; Equip Red
+              </button>
+              <button id="btnDeployCustomBlue" class="btn-editor-deploy btn-deploy-blue">
+                <i data-lucide="shield"></i> Save &amp; Equip Blue
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div id="builderStatusMsg" class="builder-status-msg"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- VIEW 2: LIVE CLASH ROYALE 2-LANE ARENA                         -->
+  <!-- ============================================================== -->
+  <main class="view-panel" id="viewArena" style="display: none;">
+    <div class="clash-arena-stage-layout">
+      
+      <!-- LEFT SIDEBAR: RED STRATEGY HUD -->
+      <aside class="player-panel panel-red" id="panelRed">
+        <div class="esports-panel-tag tag-red">
+          <span class="tag-status-dot"></span>
+          <span>STRATEGY A // NORTH BASTION</span>
+        </div>
+
+        <div class="player-header">
+          <div class="player-avatar red-avatar">🔴</div>
+          <div class="player-meta">
+            <h2 id="redName">Red Strategy</h2>
+            <span id="redAuthor">Autonomous Commander</span>
+          </div>
+          <div class="crown-badge red-crowns" id="redCrownDisplay"><i data-lucide="crown"></i> 0</div>
+        </div>
+
+        <!-- Dynamic Esports Status Pill -->
+        <div class="strategy-status-row">
+          <div class="strategy-status-pill status-live" id="redStrategyStatus">
+            <span class="status-indicator-dot"></span>
+            <strong id="redStatusText">● LIVE</strong>
+          </div>
+          <div class="recent-action-pill" id="redLastAction">
+            <span class="action-icon">⚔️</span>
+            <span id="redLastActionText">Ready for engagement</span>
+          </div>
+        </div>
+
+        <!-- Resource / Energy System with 10 Glowing Pips -->
+        <div class="elixir-box esports-energy-box">
+          <div class="elixir-header">
+            <span class="elixir-title-tag">
+              <span class="elixir-gem"><i data-lucide="zap"></i></span> ENERGY SYSTEM
+            </span>
+            <strong id="redElixirNum">5.0 / 10</strong>
+          </div>
+
+          <!-- 10 Interactive Pips -->
+          <div class="esports-pips-strip" id="redElixirPips">
+            <span class="pip active"></span><span class="pip active"></span><span class="pip active"></span>
+            <span class="pip active"></span><span class="pip active"></span><span class="pip"></span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+
+          <!-- Fluid Elixir Bar Track -->
+          <div class="elixir-bar-track">
+            <div class="elixir-bar-fill fill-red-elixir" id="redElixirBar" style="width: 50%;"></div>
+          </div>
+        </div>
+
+        <!-- Base & Watchtower Defense HUD -->
+        <div class="tower-status-group">
+          <div class="tower-section-title">FORTRESS INTEGRITY</div>
+          
+          <div class="tower-row">
+            <span><i data-lucide="crown"></i> King Core Base</span>
+            <strong id="redKingHp">2400 / 2400</strong>
+          </div>
+          <div class="tower-track"><div class="tower-fill fill-red" id="redKingBar" style="width: 100%;"></div></div>
+
+          <div class="tower-row">
+            <span><i data-lucide="shield"></i> Left Watchtower</span>
+            <strong id="redLeftHp">1400 / 1400</strong>
+          </div>
+          <div class="tower-track"><div class="tower-fill fill-red" id="redLeftBar" style="width: 100%;"></div></div>
+
+          <div class="tower-row">
+            <span><i data-lucide="shield"></i> Right Watchtower</span>
+            <strong id="redRightHp">1400 / 1400</strong>
+          </div>
+          <div class="tower-track"><div class="tower-fill fill-red" id="redRightBar" style="width: 100%;"></div></div>
+        </div>
+
+        <!-- Strategy Autonomous Execution Log -->
+        <div class="commander-thought-box">
+          <div class="thought-label">
+            <span class="live-dot"></span> AUTONOMOUS TACTICAL ENGINE
+          </div>
+          <p id="redThought">"Evaluating lane pressure and calculating optimal counter-push rotation."</p>
+          <div class="taunt-quote" id="redTaunt">"Executing tactical doctrine."</div>
+        </div>
+
+        <!-- Strategy Combat Arsenal / Active Hand -->
+        <div class="hand-deck-container">
+          <div class="hand-label">ACTIVE COMBAT ARSENAL</div>
+          <div class="hand-cards-grid" id="redHandCards"></div>
+        </div>
+      </aside>
+
+      <!-- CENTER: 2-LANE RIVER & BRIDGES ARENA -->
+      <section class="arena-center-field">
+        
+        <div class="arena-top-banner">
+          <div class="double-elixir-pill" id="doubleElixirBadge">1X REGULATION ELIXIR</div>
+          <div class="match-name-pill" id="arenaMatchHeader">CHAMPIONSHIP ARENA DUEL</div>
+        </div>
+
+        <!-- Visual Clash Royale Pitch -->
+        <div class="clash-pitch" id="clashPitch">
+          
+          <!-- TOP IN-GAME OVERLAY (Matching Reference Image) -->
+          <div class="arena-header-overlay">
+            <div class="trainer-banner-box">
+              <div class="trainer-avatar-ring">👑</div>
+              <div class="trainer-meta">
+                <strong id="pitchRedName">TRAINER EARL</strong>
+                <span id="pitchRedSub">Royal Trainers</span>
+              </div>
+            </div>
+            <div class="match-timer-pill">
+              <span class="timer-lbl">Time left:</span>
+              <strong id="pitchTimerText">2:51</strong>
+            </div>
+          </div>
+
+          <!-- SIDE CROWN SCORE INDICATORS (Matching Reference Image) -->
+          <div class="pitch-side-crowns">
+            <div class="side-crown-box red-side-crown">
+              <span class="side-crown-num" id="sideCrownRedNum">0</span>
+              <div class="side-crown-ico">👑</div>
+            </div>
+            <div class="side-crown-box blue-side-crown">
+              <div class="side-crown-ico">👑</div>
+              <span class="side-crown-num" id="sideCrownBlueNum">0</span>
+            </div>
+          </div>
+
+          <!-- WOODEN FENCES & STADIUM BOUNDARIES -->
+          <div class="arena-fence fence-north">
+            <span class="fence-post"></span><span class="fence-rail"></span><span class="fence-post"></span><span class="fence-rail"></span><span class="fence-post"></span>
+          </div>
+          <div class="arena-fence fence-south">
+            <span class="fence-post"></span><span class="fence-rail"></span><span class="fence-post"></span><span class="fence-rail"></span><span class="fence-post"></span>
+          </div>
+
+          <!-- STADIUM DETAILS: Pathways & Crests -->
+          <div class="pitch-turf-overlay">
+            <div class="field-lane-path path-left"></div>
+            <div class="field-lane-path path-right"></div>
+            <div class="field-cross-path red-cross"></div>
+            <div class="field-cross-path blue-cross"></div>
+            
+            <div class="royal-crest crest-red">
+              <div class="crest-symbol"><i data-lucide="swords"></i></div>
+            </div>
+            <div class="royal-crest crest-blue">
+              <div class="crest-symbol"><i data-lucide="shield"></i></div>
+            </div>
+          </div>
+
+          <!-- RED SIDE (NORTH 0% - 47%) -->
+          <div class="pitch-side pitch-red-side">
+            <!-- Red King Tower (Center Back) -->
+            <div class="tower-entity king-tower red-tower" id="tower_red_king" style="left: 50%; top: 9.5%;">
+              <!-- Floating Clash Royale Health Gauge (Matching Reference Image) -->
+              <div class="tower-cr-health-bar">
+                <span class="cr-crown-shield">👑</span>
+                <span class="cr-level-shield">1</span>
+                <div class="cr-hp-track">
+                  <div class="cr-hp-fill fill-red-hp" id="fill_red_king" style="width: 100%;"></div>
+                  <strong class="cr-hp-num" id="tag_red_king">2400</strong>
+                </div>
+              </div>
+
+              <!-- Tower 3D Structure -->
+              <div class="tower-castle-block">
+                <!-- Roof Deck & Characters -->
+                <div class="tower-roof-deck">
+                  <div class="tower-deck-wood"></div>
+                  <!-- Red King Character -->
+                  <div class="king-character red-king-char">
+                    <div class="king-crown-head">👑</div>
+                    <div class="king-face-beard">🧔</div>
+                    <div class="king-robe red-robe"></div>
+                  </div>
+                  <!-- Pop-up Heavy Iron Cannon -->
+                  <div class="tower-cannon-mount" id="cannon_red_king">
+                    <div class="cannon-tube"></div>
+                  </div>
+                </div>
+
+                <!-- Stone Battlements (Crenels & Merlons) -->
+                <div class="tower-crenellations">
+                  <span class="crenel crenel-l"></span>
+                  <span class="crenel crenel-c"></span>
+                  <span class="crenel crenel-r"></span>
+                  <div class="tower-team-trim red-trim"></div>
+                </div>
+
+                <!-- Main Stone Core & Royal Crown Relief -->
+                <div class="tower-stone-core">
+                  <div class="stone-brick-texture"></div>
+                  <div class="tower-royal-crest">👑</div>
+                  <div class="tower-stone-arch-door red-door">
+                    <div class="door-inner-wood"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Oval Ground Shadow -->
+              <div class="tower-ground-shadow"></div>
+
+              <!-- Placement Brackets -->
+              <div class="tower-bracket bracket-tl"></div><div class="tower-bracket bracket-tr"></div>
+              <div class="tower-bracket bracket-bl"></div><div class="tower-bracket bracket-br"></div>
+            </div>
+
+            <!-- Red Left Princess Tower -->
+            <div class="tower-entity princess-tower red-tower" id="tower_red_left" style="left: 25%; top: 22%;">
+              <!-- Floating Clash Royale Health Gauge (Matching Reference Image) -->
+              <div class="tower-cr-health-bar">
+                <span class="cr-crown-shield">👑</span>
+                <span class="cr-level-shield">1</span>
+                <div class="cr-hp-track">
+                  <div class="cr-hp-fill fill-red-hp" id="fill_red_left" style="width: 100%;"></div>
+                  <strong class="cr-hp-num" id="tag_red_left">1400</strong>
+                </div>
+              </div>
+
+              <!-- Tower 3D Structure -->
+              <div class="tower-castle-block princess-castle-block">
+                <div class="tower-roof-deck princess-deck">
+                  <div class="princess-character red-princess-char">
+                    <div class="princess-bow">🏹</div>
+                    <div class="princess-figure">
+                      <div class="princess-crown-head">👑</div>
+                      <div class="princess-face">👧</div>
+                      <div class="princess-robe red-dress"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tower-crenellations">
+                  <span class="crenel crenel-l"></span>
+                  <span class="crenel crenel-r"></span>
+                  <div class="tower-team-trim red-trim"></div>
+                </div>
+
+                <div class="tower-stone-core princess-stone-core">
+                  <div class="stone-brick-texture"></div>
+                  <div class="tower-royal-crest small-crest">👑</div>
+                  <div class="tower-wooden-ladder">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tower-ground-shadow princess-shadow"></div>
+
+              <div class="tower-bracket bracket-tl"></div><div class="tower-bracket bracket-tr"></div>
+              <div class="tower-bracket bracket-bl"></div><div class="tower-bracket bracket-br"></div>
+            </div>
+
+            <!-- Red Right Princess Tower -->
+            <div class="tower-entity princess-tower red-tower" id="tower_red_right" style="left: 75%; top: 22%;">
+              <!-- Floating Clash Royale Health Gauge (Matching Reference Image) -->
+              <div class="tower-cr-health-bar">
+                <span class="cr-crown-shield">👑</span>
+                <span class="cr-level-shield">1</span>
+                <div class="cr-hp-track">
+                  <div class="cr-hp-fill fill-red-hp" id="fill_red_right" style="width: 100%;"></div>
+                  <strong class="cr-hp-num" id="tag_red_right">1400</strong>
+                </div>
+              </div>
+
+              <!-- Tower 3D Structure -->
+              <div class="tower-castle-block princess-castle-block">
+                <div class="tower-roof-deck princess-deck">
+                  <div class="princess-character red-princess-char">
+                    <div class="princess-bow">🏹</div>
+                    <div class="princess-figure">
+                      <div class="princess-crown-head">👑</div>
+                      <div class="princess-face">👧</div>
+                      <div class="princess-robe red-dress"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tower-crenellations">
+                  <span class="crenel crenel-l"></span>
+                  <span class="crenel crenel-r"></span>
+                  <div class="tower-team-trim red-trim"></div>
+                </div>
+
+                <div class="tower-stone-core princess-stone-core">
+                  <div class="stone-brick-texture"></div>
+                  <div class="tower-royal-crest small-crest">👑</div>
+                  <div class="tower-wooden-ladder">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tower-ground-shadow princess-shadow"></div>
+
+              <div class="tower-bracket bracket-tl"></div><div class="tower-bracket bracket-tr"></div>
+              <div class="tower-bracket bracket-bl"></div><div class="tower-bracket bracket-br"></div>
+            </div>
+          </div>
+
+          <!-- THE RIVER & BRIDGES (47% - 53%) -->
+          <div class="pitch-river">
+            <div class="river-water-shader">
+              <div class="river-wave wave1"></div>
+              <div class="river-wave wave2"></div>
+            </div>
+            <div class="river-bank bank-top"></div>
+            <div class="river-bank bank-bottom"></div>
+
+            <!-- Left Bridge -->
+            <div class="river-bridge bridge-left" style="left: 25%;">
+              <div class="bridge-pier pier-left"></div>
+              <div class="bridge-deck">
+                <span class="bridge-plank"></span>
+                <span class="bridge-plank"></span>
+                <span class="bridge-plank"></span>
+                <span class="bridge-plank"></span>
+              </div>
+              <div class="bridge-pier pier-right"></div>
+            </div>
+
+            <!-- Right Bridge -->
+            <div class="river-bridge bridge-right" style="left: 75%;">
+              <div class="bridge-pier pier-left"></div>
+              <div class="bridge-deck">
+                <span class="bridge-plank"></span>
+                <span class="bridge-plank"></span>
+                <span class="bridge-plank"></span>
+                <span class="bridge-plank"></span>
+              </div>
+              <div class="bridge-pier pier-right"></div>
+            </div>
+          </div>
+
+          <!-- BLUE SIDE (SOUTH 53% - 100%) -->
+          <div class="pitch-side pitch-blue-side">
+            <!-- Blue Left Princess Tower -->
+            <div class="tower-entity princess-tower blue-tower" id="tower_blue_left" style="left: 25%; top: 78%;">
+              <!-- Floating Clash Royale Health Gauge (Matching Reference Image) -->
+              <div class="tower-cr-health-bar">
+                <span class="cr-crown-shield">👑</span>
+                <span class="cr-level-shield">1</span>
+                <div class="cr-hp-track">
+                  <div class="cr-hp-fill fill-blue-hp" id="fill_blue_left" style="width: 100%;"></div>
+                  <strong class="cr-hp-num" id="tag_blue_left">1400</strong>
+                </div>
+              </div>
+
+              <!-- Tower 3D Structure -->
+              <div class="tower-castle-block princess-castle-block">
+                <div class="tower-roof-deck princess-deck">
+                  <div class="princess-character blue-princess-char">
+                    <div class="princess-bow">🏹</div>
+                    <div class="princess-figure">
+                      <div class="princess-crown-head">👑</div>
+                      <div class="princess-face">👧</div>
+                      <div class="princess-robe blue-dress"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tower-crenellations">
+                  <span class="crenel crenel-l"></span>
+                  <span class="crenel crenel-r"></span>
+                  <div class="tower-team-trim blue-trim"></div>
+                </div>
+
+                <div class="tower-stone-core princess-stone-core">
+                  <div class="stone-brick-texture"></div>
+                  <div class="tower-royal-crest small-crest">👑</div>
+                  <div class="tower-wooden-ladder">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tower-ground-shadow princess-shadow"></div>
+            </div>
+
+            <!-- Blue Right Princess Tower -->
+            <div class="tower-entity princess-tower blue-tower" id="tower_blue_right" style="left: 75%; top: 78%;">
+              <!-- Floating Clash Royale Health Gauge (Matching Reference Image) -->
+              <div class="tower-cr-health-bar">
+                <span class="cr-crown-shield">👑</span>
+                <span class="cr-level-shield">1</span>
+                <div class="cr-hp-track">
+                  <div class="cr-hp-fill fill-blue-hp" id="fill_blue_right" style="width: 100%;"></div>
+                  <strong class="cr-hp-num" id="tag_blue_right">1400</strong>
+                </div>
+              </div>
+
+              <!-- Tower 3D Structure -->
+              <div class="tower-castle-block princess-castle-block">
+                <div class="tower-roof-deck princess-deck">
+                  <div class="princess-character blue-princess-char">
+                    <div class="princess-bow">🏹</div>
+                    <div class="princess-figure">
+                      <div class="princess-crown-head">👑</div>
+                      <div class="princess-face">👧</div>
+                      <div class="princess-robe blue-dress"></div>
+                    </div>
+                  </div>
+                </div>
+
+                <div class="tower-crenellations">
+                  <span class="crenel crenel-l"></span>
+                  <span class="crenel crenel-r"></span>
+                  <div class="tower-team-trim blue-trim"></div>
+                </div>
+
+                <div class="tower-stone-core princess-stone-core">
+                  <div class="stone-brick-texture"></div>
+                  <div class="tower-royal-crest small-crest">👑</div>
+                  <div class="tower-wooden-ladder">
+                    <span></span><span></span><span></span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="tower-ground-shadow princess-shadow"></div>
+            </div>
+
+            <!-- Blue King Tower (Center Back) -->
+            <div class="tower-entity king-tower blue-tower" id="tower_blue_king" style="left: 50%; top: 90.5%;">
+              <!-- Floating Clash Royale Health Gauge (Matching Reference Image) -->
+              <div class="tower-cr-health-bar">
+                <span class="cr-crown-shield">👑</span>
+                <span class="cr-level-shield">1</span>
+                <div class="cr-hp-track">
+                  <div class="cr-hp-fill fill-blue-hp" id="fill_blue_king" style="width: 100%;"></div>
+                  <strong class="cr-hp-num" id="tag_blue_king">2400</strong>
+                </div>
+              </div>
+
+              <!-- Tower 3D Structure -->
+              <div class="tower-castle-block">
+                <div class="tower-roof-deck">
+                  <div class="tower-deck-wood"></div>
+                  <!-- Blue King Character -->
+                  <div class="king-character blue-king-char">
+                    <div class="king-crown-head">👑</div>
+                    <div class="king-face-beard">🧔</div>
+                    <div class="king-robe blue-robe"></div>
+                  </div>
+                  <!-- Pop-up Cannon -->
+                  <div class="tower-cannon-mount" id="cannon_blue_king">
+                    <div class="cannon-tube"></div>
+                  </div>
+                </div>
+
+                <div class="tower-crenellations">
+                  <span class="crenel crenel-l"></span>
+                  <span class="crenel crenel-c"></span>
+                  <span class="crenel crenel-r"></span>
+                  <div class="tower-team-trim blue-trim"></div>
+                </div>
+
+                <div class="tower-stone-core">
+                  <div class="stone-brick-texture"></div>
+                  <div class="tower-royal-crest">👑</div>
+                  <div class="tower-stone-arch-door blue-door">
+                    <div class="door-inner-wood"></div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Level badge at base (matching reference image) -->
+              <div class="tower-base-level-badge">1</div>
+
+              <div class="tower-ground-shadow"></div>
+            </div>
+          </div>
+
+          <!-- ACTIVE TROOPS LAYER -->
+          <div class="troops-overlay-layer" id="troopsLayer"></div>
+
+          <!-- DEDICATED HARDWARE ACCELERATED FX CANVAS -->
+          <canvas id="fxCanvas" class="fx-canvas"></canvas>
+        </div>
+
+        <!-- ESPORTS LIVE COMBAT TELEMETRY (Compact Event Ticker) -->
+        <div class="esports-feed-container">
+          <div class="feed-header-bar">
+            <div class="feed-live-indicator">
+              <span class="live-dot-green"></span>
+              <strong>LIVE BATTLE TICKER</strong>
+              <small class="feed-sub">// AUTONOMOUS EVENT STREAM</small>
+            </div>
+            <div class="feed-actions-badge" id="feedCounterBadge">0 EVENTS RECORDED</div>
+          </div>
+          <div class="feed-list esports-feed-list" id="combatFeed">
+            <div class="feed-msg init">Autonomous arena synchronized. Awaiting strategy engagement...</div>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- RIGHT SIDEBAR: BLUE STRATEGY HUD -->
+      <aside class="player-panel panel-blue" id="panelBlue">
+        <div class="esports-panel-tag tag-blue">
+          <span class="tag-status-dot"></span>
+          <span>STRATEGY B // SOUTH BASTION</span>
+        </div>
+
+        <div class="player-header">
+          <div class="player-avatar blue-avatar">🔵</div>
+          <div class="player-meta">
+            <h2 id="blueName">Blue Strategy</h2>
+            <span id="blueAuthor">Autonomous Commander</span>
+          </div>
+          <div class="crown-badge blue-crowns" id="blueCrownDisplay"><i data-lucide="crown"></i> 0</div>
+        </div>
+
+        <!-- Dynamic Esports Status Pill -->
+        <div class="strategy-status-row">
+          <div class="strategy-status-pill status-live" id="blueStrategyStatus">
+            <span class="status-indicator-dot"></span>
+            <strong id="blueStatusText">● LIVE</strong>
+          </div>
+          <div class="recent-action-pill" id="blueLastAction">
+            <span class="action-icon">⚔️</span>
+            <span id="blueLastActionText">Ready for engagement</span>
+          </div>
+        </div>
+
+        <!-- Resource / Energy System with 10 Glowing Pips -->
+        <div class="elixir-box esports-energy-box">
+          <div class="elixir-header">
+            <span class="elixir-title-tag">
+              <span class="elixir-gem"><i data-lucide="zap"></i></span> ENERGY SYSTEM
+            </span>
+            <strong id="blueElixirNum">5.0 / 10</strong>
+          </div>
+
+          <!-- 10 Interactive Pips -->
+          <div class="esports-pips-strip" id="blueElixirPips">
+            <span class="pip active"></span><span class="pip active"></span><span class="pip active"></span>
+            <span class="pip active"></span><span class="pip active"></span><span class="pip"></span>
+            <span class="pip"></span><span class="pip"></span><span class="pip"></span><span class="pip"></span>
+          </div>
+
+          <!-- Fluid Elixir Bar Track -->
+          <div class="elixir-bar-track">
+            <div class="elixir-bar-fill fill-blue-elixir" id="blueElixirBar" style="width: 50%;"></div>
+          </div>
+        </div>
+
+        <!-- Base & Watchtower Defense HUD -->
+        <div class="tower-status-group">
+          <div class="tower-section-title">FORTRESS INTEGRITY</div>
+
+          <div class="tower-row">
+            <span><i data-lucide="crown"></i> King Core Base</span>
+            <strong id="blueKingHp">2400 / 2400</strong>
+          </div>
+          <div class="tower-track"><div class="tower-fill fill-blue" id="blueKingBar" style="width: 100%;"></div></div>
+
+          <div class="tower-row">
+            <span><i data-lucide="shield"></i> Left Watchtower</span>
+            <strong id="blueLeftHp">1400 / 1400</strong>
+          </div>
+          <div class="tower-track"><div class="tower-fill fill-blue" id="blueLeftBar" style="width: 100%;"></div></div>
+
+          <div class="tower-row">
+            <span><i data-lucide="shield"></i> Right Watchtower</span>
+            <strong id="blueRightHp">1400 / 1400</strong>
+          </div>
+          <div class="tower-track"><div class="tower-fill fill-blue" id="blueRightBar" style="width: 100%;"></div></div>
+        </div>
+
+        <!-- Strategy Autonomous Execution Log -->
+        <div class="commander-thought-box">
+          <div class="thought-label">
+            <span class="live-dot"></span> AUTONOMOUS TACTICAL ENGINE
+          </div>
+          <p id="blueThought">"Saving elixir reserves for high-impact counter-push."</p>
+          <div class="taunt-quote" id="blueTaunt">"Executing tactical doctrine."</div>
+        </div>
+
+        <!-- Strategy Combat Arsenal / Active Hand -->
+        <div class="hand-deck-container">
+          <div class="hand-label">ACTIVE COMBAT ARSENAL</div>
+          <div class="hand-cards-grid" id="blueHandCards"></div>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- VIEW 3: TOURNAMENT BRACKET (KNOCKOUT CUP)                      -->
+  <!-- ============================================================== -->
+  <section class="view-panel" id="viewBracket" style="display: none;">
+    <div class="tournament-layout">
+      <div class="bracket-header-row">
+        <div class="bracket-title-box">
+          <div class="headline-badge">CHAMPIONSHIP CUP</div>
+          <h2><i data-lucide="trophy"></i> SINGLE-ELIMINATION KNOCKOUT BRACKET</h2>
+          <p>Crown winner advances to next round; defeated kingdoms are eliminated.</p>
+        </div>
+        <div class="bracket-action-buttons">
+          <button id="btnCreateBracket" class="btn-primary"><i data-lucide="shuffle"></i> Generate 4-Team Bracket</button>
+          <button id="btnExportTourney" class="btn-secondary"><i data-lucide="upload"></i> Export JSON</button>
+          <button id="btnImportTourney" class="btn-secondary"><i data-lucide="download"></i> Import JSON</button>
+        </div>
+      </div>
+
+      <!-- Knockout Tree -->
+      <div class="bracket-tree-container" id="bracketTree"></div>
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- VIEW 4: 3D CARD COMPENDIUM & ARENA RULES CODEX                 -->
+  <!-- ============================================================== -->
+  <section class="view-panel" id="viewRules" style="display: none;">
+    <div class="rules-view-container">
+      <div class="headline-badge">OFFICIAL TOURNAMENT CODEX // CLASH ROYALE 3D INTERFACE</div>
+      <h2><i data-lucide="layers"></i> 3D CARD COMPENDIUM & ARENA RULES</h2>
+      <p class="rules-subtitle">Interactive 3D battle cards, WebGL arena diorama, unit blueprints, and tournament regulations.</p>
+
+      <!-- Codex Sub-Navigation Bar -->
+      <div class="codex-subnav">
+        <button class="codex-subtab active" id="tabCompendium3D" data-subtab="compendium">
+          <i data-lucide="box"></i> 3D CARD COMPENDIUM (10 ELEMENTS)
+        </button>
+        <button class="codex-subtab" id="tabArenaRules3D" data-subtab="arena">
+          <i data-lucide="map-pin"></i> 3D ARENA HOLO-DIORAMA & RULES
+        </button>
+      </div>
+
+      <!-- ================= SUB-PANEL 1: 3D CARD COMPENDIUM ================= -->
+      <div class="codex-panel active" id="subpanelCompendium">
+        
+        <!-- Filter & Search Controls -->
+        <div class="card-filter-toolbar">
+          <div class="filter-group">
+            <span class="filter-label"><i data-lucide="filter"></i> ELEMENT TYPE:</span>
+            <button class="filter-btn active" data-filter-type="all">ALL (10)</button>
+            <button class="filter-btn" data-filter-type="troop">TROOPS</button>
+            <button class="filter-btn" data-filter-type="tank">TANKS</button>
+            <button class="filter-btn" data-filter-type="swarm">SWARMS</button>
+            <button class="filter-btn" data-filter-type="air">AIR</button>
+            <button class="filter-btn" data-filter-type="spell">SPELLS</button>
+          </div>
+
+          <div class="filter-group">
+            <span class="filter-label"><i data-lucide="zap"></i> ELIXIR:</span>
+            <button class="filter-btn active" data-filter-elixir="all">ANY</button>
+            <button class="filter-btn" data-filter-elixir="2">2e</button>
+            <button class="filter-btn" data-filter-elixir="3">3e</button>
+            <button class="filter-btn" data-filter-elixir="4">4e</button>
+            <button class="filter-btn" data-filter-elixir="5">5e</button>
+            <button class="filter-btn" data-filter-elixir="7">7e</button>
+          </div>
+
+          <div class="filter-search-box">
+            <i data-lucide="search"></i>
+            <input type="text" id="cardSearchInput" placeholder="Search cards (e.g. Knight, Giant, Pekka)...">
+          </div>
+        </div>
+
+        <!-- Card IDs Quick Reference Bar -->
+        <div class="card-ids-bar">
+          <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <strong style="color: #ffd700; font-size: 13.5px; letter-spacing: 0.5px;">
+              <i data-lucide="clipboard-list"></i> ALL 10 CARD IDS (Click chip to copy for your .md skill file):
+            </strong>
+            <span style="font-size: 11.5px; color: #94a3b8;">Use exact IDs in your 8-card roster</span>
+          </div>
+          <div class="card-ids-chip-container" id="quickCardChips">
+            <!-- Populated dynamically with click-to-copy chips -->
+          </div>
+        </div>
+
+        <!-- 3D CARDS GRID -->
+        <div class="cards-catalog-3d-grid" id="cardsCatalogGrid">
+          <!-- Populated dynamically from CARD_PROTOS in app.js -->
+        </div>
+      </div>
+
+      <!-- ================= SUB-PANEL 2: 3D ARENA HOLO-DIORAMA ================= -->
+      <div class="codex-panel" id="subpanelArena" style="display: none;">
+        
+        <div class="arena-3d-wrapper">
+          
+          <!-- WebGL 3D Arena Stage -->
+          <div class="arena-3d-stage">
+            <div class="stage-overlay-bar">
+              <span class="stage-title"><i data-lucide="eye"></i> 3D BATTLEFIELD HOLO-DIORAMA</span>
+              
+              <div class="camera-preset-buttons">
+                <button class="cam-btn active" data-cam="iso"><i data-lucide="box"></i> 3D ISO</button>
+                <button class="cam-btn" data-cam="top"><i data-lucide="arrow-down-left"></i> TOP DOWN</button>
+                <button class="cam-btn" data-cam="red"><i data-lucide="shield"></i> RED BASE</button>
+                <button class="cam-btn" data-cam="blue"><i data-lucide="shield"></i> BLUE BASE</button>
+                <button class="cam-btn" id="btnToggle3DRotate"><i data-lucide="refresh-cw"></i> AUTO ROTATE</button>
+              </div>
+            </div>
+
+            <canvas id="arena3dCanvas" class="arena-3d-canvas"></canvas>
+
+            <div class="stage-hint">
+              <i data-lucide="mouse-pointer"></i> Drag left-click to orbit 360° • Right-click to pan • Scroll to zoom • Click 3D glowing markers for rule dossiers
+            </div>
+          </div>
+
+          <!-- Interactive Rule Hotspots / Dossier Sidebar -->
+          <div class="arena-rules-dossier-container">
+            
+            <div class="dossier-card active" id="ruleCardKing">
+              <div class="dossier-header red-border">
+                <i data-lucide="crown" class="gold-icon"></i>
+                <div>
+                  <h4>KING KEEP FORTRESS</h4>
+                  <small>North & South Command Towers</small>
+                </div>
+              </div>
+              <div class="dossier-stats">
+                <span><strong>HP:</strong> 2,400</span>
+                <span><strong>DPS:</strong> 145</span>
+                <span><strong>Range:</strong> 22.0</span>
+                <span><strong>Aggro:</strong> Dormant until attacked</span>
+              </div>
+              <p>Destroying the opponent King Keep results in an <strong>instant 3-Crown Knockout victory</strong>! Cannon becomes active if damaged or if either Princess Tower falls.</p>
+            </div>
+
+            <div class="dossier-card" id="ruleCardPrincess">
+              <div class="dossier-header blue-border">
+                <i data-lucide="shield" class="blue-icon"></i>
+                <div>
+                  <h4>PRINCESS BASTION TOWERS</h4>
+                  <small>Left & Right Lane Anchors</small>
+                </div>
+              </div>
+              <div class="dossier-stats">
+                <span><strong>HP:</strong> 1,400</span>
+                <span><strong>DPS:</strong> 115</span>
+                <span><strong>Range:</strong> 26.0</span>
+                <span><strong>Targets:</strong> Ground & Air</span>
+              </div>
+              <p>Primary lane defenses covering the river bridges. Defending troops must shield these towers to prevent crown loss and preserve flank control.</p>
+            </div>
+
+            <div class="dossier-card" id="ruleCardRiver">
+              <div class="dossier-header teal-border">
+                <i data-lucide="waves" class="teal-icon"></i>
+                <div>
+                  <h4>2-LANE RIVER & BRIDGES</h4>
+                  <small>Map Split Y=50% • Bridges X=25% / X=75%</small>
+                </div>
+              </div>
+              <p>Ground troops (Knight, Pekka, Giant, Hog Rider, Skeletons) must traverse the Left (X=25%) or Right (X=75%) bridge. Flying troops (Baby Dragon) cross the river freely.</p>
+            </div>
+
+            <div class="dossier-card" id="ruleCardElixir">
+              <div class="dossier-header purple-border">
+                <i data-lucide="zap" class="purple-icon"></i>
+                <div>
+                  <h4>ELIXIR ECONOMY & DOUBLE ELIXIR</h4>
+                  <small>Capacity: 10.0 Elixir Cap</small>
+                </div>
+              </div>
+              <div class="dossier-stats">
+                <span><strong>1x Regulation:</strong> +0.5 / sec (1e per 2.0s)</span>
+                <span><strong>2x Double Elixir:</strong> +1.0 / sec (At 2:00 mark)</span>
+              </div>
+              <p>Commander AI deploys cards consuming simulated Elixir. At 2 minutes elapsed (final 60s & Overtime), Elixir generation doubles to trigger intense endgame pushes!</p>
+            </div>
+
+            <div class="dossier-card" id="ruleCardFSM">
+              <div class="dossier-header gold-border">
+                <i data-lucide="cpu" class="gold-icon"></i>
+                <div>
+                  <h4>AUTONOMOUS TROOP FSM AI</h4>
+                  <small>Deterministic Finite State Machine</small>
+                </div>
+              </div>
+              <p>Deployed troops execute rigid local FSM loops: <code>SPAWN → MARCH → ACQUIRE TARGET → ATTACK → DEATH</code>. Siege units (Giant, Hog Rider) strictly target Towers; Combat units (Pekka, Knight, Archers, Dragon) attack nearest targets.</p>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============================================================== -->
+  <!-- 3D CARD INSPECTOR & MODEL SHOWCASE MODAL                       -->
+  <!-- ============================================================== -->
+  <div class="modal-overlay" id="card3dModal">
+    <div class="modal-card modal-card-3d">
+      <button class="modal-close-btn" id="btnCard3dDismiss" title="Close"><i data-lucide="x"></i></button>
+
+      <div class="modal-3d-layout">
+        
+        <!-- LEFT: 3D WebGL Element Showcase -->
+        <div class="modal-3d-viewport">
+          <div class="viewport-badge" id="modalCard3dRarity">EPIC TROOP</div>
+          <canvas id="card3dCanvas" class="card-3d-canvas"></canvas>
+          <div class="viewport-controls-hint">
+            <i data-lucide="rotate-3d"></i> Orbit 360° • Zoom • Drag
+          </div>
+          
+          <div class="viewport-action-row">
+            <button class="btn-action-3d" id="btn3dTestAttack">
+              <i data-lucide="swords"></i> TEST 3D ATTACK
+            </button>
+            <button class="btn-action-3d" id="btn3dPlaySound">
+              <i data-lucide="volume-2"></i> SOUND FX
+            </button>
+          </div>
+        </div>
+
+        <!-- RIGHT: Card Statistics & Blueprint -->
+        <div class="modal-3d-info">
+          <div class="card-header-3d">
+            <div class="card-title-cluster">
+              <span class="c-icon-lg" id="modalCard3dIcon">🤖</span>
+              <div>
+                <h2 id="modalCard3dName">P.E.K.K.A</h2>
+                <small id="modalCard3dType">Heavy Armor Titan</small>
+              </div>
+            </div>
+            <div class="elixir-badge-3d" id="modalCard3dElixir">💧 7 ELIXIR</div>
+          </div>
+
+          <div class="card-id-copy-box">
+            <span>Skill File Card ID:</span>
+            <code id="modalCard3dId">pekka</code>
+            <button id="btnCopyModalCardId" class="btn-copy-sm"><i data-lucide="copy"></i> Copy</button>
+          </div>
+
+          <!-- LEVEL STAT SCALER -->
+          <div class="level-scaler-box">
+            <div class="scaler-header">
+              <span>CARD LEVEL PREVIEW:</span>
+              <strong id="cardLevelNum">Level 11 (Tournament Standard)</strong>
+            </div>
+            <input type="range" id="cardLevelSlider" min="1" max="15" value="11" class="level-slider">
+          </div>
+
+          <!-- Dynamic Stat Bars -->
+          <div class="stat-bars-container">
+            <div class="stat-bar-row">
+              <div class="stat-label"><span><i data-lucide="heart"></i> Hit Points (HP):</span> <strong id="modalCard3dHp">2,600</strong></div>
+              <div class="stat-track"><div class="stat-fill fill-hp" id="barModalHp" style="width: 85%;"></div></div>
+            </div>
+
+            <div class="stat-bar-row">
+              <div class="stat-label"><span><i data-lucide="zap"></i> Damage / Hit:</span> <strong id="modalCard3dDmg">420</strong></div>
+              <div class="stat-track"><div class="stat-fill fill-dmg" id="barModalDmg" style="width: 90%;"></div></div>
+            </div>
+
+            <div class="stat-bar-row">
+              <div class="stat-label"><span><i data-lucide="target"></i> Target Preference:</span> <strong id="modalCard3dTarget">Ground & Air (Nearest)</strong></div>
+            </div>
+
+            <div class="stat-bar-row">
+              <div class="stat-label"><span><i data-lucide="gauge"></i> Movement Speed:</span> <strong id="modalCard3dSpeed">Medium (8.0 tiles/s)</strong></div>
+            </div>
+          </div>
+
+          <p class="modal-card-desc" id="modalCard3dDesc">Heavily armored mechanical beast. Obliterates single-target tanks with catastrophic sword strikes.</p>
+
+          <div class="tactical-tactics-grid">
+            <div class="tactic-box">
+              <strong class="text-green"><i data-lucide="sparkles"></i> BEST SYNERGIES:</strong>
+              <p id="modalCard3dSynergies">Baby Dragon (Splash support), Musketeer (Air sniping)</p>
+            </div>
+            <div class="tactic-box">
+              <strong class="text-red"><i data-lucide="shield-alert"></i> HARD COUNTERS:</strong>
+              <p id="modalCard3dCounters">Skeleton Army (Swarm distraction), Archers (Distance kiting)</p>
+            </div>
+          </div>
+
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================================== -->
+  <!-- DEVELOPER / DEBUG TELEMETRY DRAWER (Toggled via [DEBUG] Button)-->
+  <!-- ============================================================== -->
+  <aside class="debug-drawer" id="debugPanel" style="display: none;">
+    <div class="debug-header">
+      <div class="debug-title">
+        <i data-lucide="terminal"></i>
+        <span>DEVELOPER TELEMETRY INSPECTOR</span>
+      </div>
+      <button class="debug-close-btn" id="btnDebugClose" title="Close Debug Panel"><i data-lucide="x"></i></button>
+    </div>
+    <div class="debug-body">
+      <div class="debug-stat-grid">
+        <div class="debug-stat-chip">
+          <small>TICK ROUND</small>
+          <strong id="debugTickRound">0</strong>
+        </div>
+        <div class="debug-stat-chip">
+          <small>ELAPSED TIME</small>
+          <strong id="debugElapsedTime">0.0s</strong>
+        </div>
+        <div class="debug-stat-chip">
+          <small>ACTIVE UNITS</small>
+          <strong id="debugUnitCount">0</strong>
+        </div>
+        <div class="debug-stat-chip">
+          <small>ENGINE STATUS</small>
+          <strong id="debugEngineStatus">STANDBY</strong>
+        </div>
+      </div>
+
+      <div class="debug-section-title">ACTIVE COMBATANTS ON FIELD</div>
+      <div class="debug-table-wrapper">
+        <table class="debug-table">
+          <thead>
+            <tr><th>TEAM</th><th>CARD</th><th>LANE</th><th>X</th><th>Y</th><th>HP</th></tr>
+          </thead>
+          <tbody id="debugTroopsTbody">
+            <tr><td colspan="6" class="text-muted">No active units deployed.</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="debug-section-title">RAW ENGINE STATE JSON</div>
+      <pre class="debug-json-dump" id="debugJsonDump">{}</pre>
+    </div>
+  </aside>
+
+  <!-- ============================================================== -->
+  <!-- ESPORTS VICTORY & MATCH CONCLUSION RESULT OVERLAY             -->
+  <!-- ============================================================== -->
+  <div class="modal-overlay" id="victoryModal">
+    <div class="modal-card esports-victory-card">
+      <button class="modal-close-btn" id="btnModalDismiss" title="Close"><i data-lucide="x"></i></button>
+      
+      <div class="modal-header-hero">
+        <div class="modal-crest" id="modalWinnerCrest">🏆</div>
+        <div class="modal-hero-text">
+          <div class="modal-overline">MATCH CONCLUDED // AUTONOMOUS STRATEGY ARENA</div>
+          <h1 class="modal-title" id="modalWinnerTitle">ASTRAL CONCLAVE VICTORIOUS</h1>
+          <p class="modal-reason" id="modalWinnerReason">Royal King Core was demolished in combat.</p>
+        </div>
+      </div>
+
+      <!-- Crown Score Banner -->
+      <div class="modal-score-banner">
+        <div class="score-team red-team-score">
+          <strong id="modalRedName">ASTRAL CONCLAVE</strong>
+          <div class="score-crown-badge" id="modalRedCrowns">🔴 0 CROWNS</div>
+        </div>
+        <div class="score-vs-divider">VS</div>
+        <div class="score-team blue-team-score">
+          <strong id="modalBlueName">BERSERKER BLITZ</strong>
+          <div class="score-crown-badge" id="modalBlueCrowns">🔵 0 CROWNS</div>
+        </div>
+      </div>
+
+      <!-- HEAD-TO-HEAD BATTLE STATISTICS COMPARISON -->
+      <div class="modal-stats-section">
+        <div class="stats-table-title">HEAD-TO-HEAD BATTLE STATISTICS</div>
+        <div class="esports-stats-grid">
+          <div class="stat-compare-row">
+            <span class="stat-val red-val" id="statRedDmg">0</span>
+            <span class="stat-name"><i data-lucide="zap"></i> Total Damage Dealt</span>
+            <span class="stat-val blue-val" id="statBlueDmg">0</span>
+          </div>
+          <div class="stat-compare-row">
+            <span class="stat-val red-val" id="statRedElixir">0.0</span>
+            <span class="stat-name"><i data-lucide="droplet"></i> Energy / Elixir Spent</span>
+            <span class="stat-val blue-val" id="statBlueElixir">0.0</span>
+          </div>
+          <div class="stat-compare-row">
+            <span class="stat-val red-val" id="statRedCards">0</span>
+            <span class="stat-name"><i data-lucide="layers"></i> Units & Spells Deployed</span>
+            <span class="stat-val blue-val" id="statBlueCards">0</span>
+          </div>
+          <div class="stat-compare-row">
+            <span class="stat-val red-val" id="statRedKingHp">2400 HP</span>
+            <span class="stat-name"><i data-lucide="shield"></i> King Core Remaining HP</span>
+            <span class="stat-val blue-val" id="statBlueKingHp">2400 HP</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="modal-actions">
+        <button class="btn-primary" id="btnModalClose"><i data-lucide="trophy"></i> TOURNAMENT BRACKET</button>
+        <button class="btn-secondary" id="btnModalStay"><i data-lucide="eye"></i> SPECTATE BATTLEFIELD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Global Clash Floating Toast Notification Container -->
+  <div id="clashToast" class="clash-toast" role="status" aria-live="polite"></div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
