@@ -47,10 +47,41 @@ def detect_card_from_text(text: str) -> Optional[str]:
     cards = find_all_cards_in_text(text)
     return cards[0] if cards else None
 
+def _is_card_target_reference(card_id: str, action_text: str) -> bool:
+    """Checks if a card mentioned in the action text is an enemy target or reference rather than a unit to deploy."""
+    t = action_text.lower()
+    # Patterns indicating the card is a target to attack/counter or a positional reference
+    target_patterns = [
+        rf"\b(?:onto|on|kill|destroy|against|counter)\s+(?:the\s+|that\s+|an\s+)?(?:enemy\s+|opponent(?:'s)?\s+|opp\s+)?\b{card_id}\b",
+        rf"\b(?:enemy|opponent(?:'s)?|opp|their|that)\s+{card_id}\b",
+        rf"\b{card_id}\b\s+(?:of\s+the\s+enemy|drops?|is\s+deployed)",
+        rf"\b(?:behind|front\s+of|near|at)\s+(?:that|the|enemy)\s+{card_id}\b",
+        rf"\bwhere\s+(?:the\s+|opponent(?:'s)?\s+)?{card_id}\b",
+        rf"\blane\s+in\s+which\s+{card_id}\b",
+    ]
+    # Check with aliases/synonyms
+    alias_map = {
+        "hog_rider": "hog",
+        "goblin_barrel": "barrel",
+        "baby_dragon": "dragon",
+        "skeletons": "skarmy",
+    }
+    alias = alias_map.get(card_id)
+    if alias:
+        target_patterns.append(rf"\b(?:onto|on|against)\s+(?:the\s+|that\s+)?(?:enemy\s+|opponent(?:'s)?\s+)?\b{alias}\b")
+        target_patterns.append(rf"\b(?:enemy|opponent(?:'s)?)\s+{alias}\b")
+        target_patterns.append(rf"\b(?:behind|front\s+of)\s+(?:that|the|enemy)\s+{alias}\b")
+        target_patterns.append(rf"\blane\s+in\s+which\s+{alias}\b")
+
+    for pat in target_patterns:
+        if re.search(pat, t, re.IGNORECASE):
+            return True
+    return False
+
 def parse_tactical_trigger_rule(raw_line: str) -> Dict[str, Any]:
     """Parses natural language IF-THEN / -> trigger rules into actionable conditions and actions."""
     clean_line = re.sub(r"^\d+[\.\)]\s*", "", raw_line).lstrip("-* ").strip()
-    parts = re.split(r"\s*(?:->\s*then\b|->|\b,\s*then\b|\bthen\b)\s*", clean_line, maxsplit=1, flags=re.IGNORECASE)
+    parts = re.split(r"\s*(?:->\s*then\b|->|=>|:\s*then\b|:\s*(?=[a-zA-Z])|\b,\s*then\b|\bthen\b)\s*", clean_line, maxsplit=1, flags=re.IGNORECASE)
     if len(parts) > 1:
         cond_text = parts[0].strip()
         action_text = parts[1].strip()
@@ -67,41 +98,53 @@ def parse_tactical_trigger_rule(raw_line: str) -> Dict[str, Any]:
     cond: Dict[str, Any] = {}
     c_low = cond_clean.lower()
 
-    # 1. Friendly card check (e.g. "our PEKKA is deployed", "my pekka")
-    is_friendly = bool(re.search(r"\b(?:our|my|allied|friendly)\s+([a-zA-Z\s\._]+)", cond_clean, re.IGNORECASE))
-    if is_friendly:
-        f_cards = find_all_cards_in_text(cond_clean)
-        if f_cards:
-            cond["friendly_card"] = f_cards[0]
+    # 1. Card recognition in condition with precise friendly vs enemy attribution
+    all_cond_cards = find_all_cards_in_text(cond_clean)
+    e_cards = []
 
-    # 2. Elixir check (handles "elixir >= 8", "my elixer is greater than 8", etc.)
-    elixir_m = re.search(r"elix[ie]r\s*(?:>=|>|is\s*at\s*least|=|is\s*greater\s*than|greater\s*than|more\s*than|above|over)\s*(\d+(?:\.\d+)?)", cond_clean, re.IGNORECASE)
+    for c in all_cond_cards:
+        # Check if this specific card is explicitly declared friendly
+        is_card_friendly = bool(re.search(rf"\b(?:our|my|allied|friendly)\s+(?:active\s+|deployed\s+)?{c}\b", cond_clean, re.IGNORECASE))
+        if not is_card_friendly:
+            # Check with aliases
+            if c == "pekka" and re.search(r"\b(?:our|my|allied|friendly)\s+p\.?e\.?k\.?k\.?a\b", cond_clean, re.IGNORECASE):
+                is_card_friendly = True
+
+        if is_card_friendly:
+            cond["friendly_card"] = c
+        else:
+            e_cards.append(c)
+
+    # 2. Elixir check (handles "elixir >= 8", "my elixer is greater than 8", "5+ elixir", etc.)
+    elixir_m = re.search(r"(?:elix[ie]r\s*(?:>=|>|==|=|is\s*at\s*least|is\s*greater\s*than|greater\s*than|more\s*than|above|over|reaches|at\s*least)?\s*(\d+(?:\.\d+)?)|(?:at|reach|with)\s*(\d+(?:\.\d+)?)\s*elix[ie]r)", cond_clean, re.IGNORECASE)
     if elixir_m:
-        cond["min_elixir"] = float(elixir_m.group(1))
+        val = elixir_m.group(1) or elixir_m.group(2)
+        if val:
+            cond["min_elixir"] = float(val)
 
-    # 3. Tower HP direct threshold (e.g. "Tower HP < 380")
-    tower_hp_m = re.search(r"(?:tower|hp)\s*(?:<|below|under|less\s*than|<=)\s*(\d+)", cond_clean, re.IGNORECASE)
+    # 3. Tower HP direct threshold (e.g. "Tower HP < 380", "< ~400 HP")
+    tower_hp_m = re.search(r"(?:tower|hp|health)\s*(?:<|below|under|less\s*than|<=)\s*~?\s*(\d+)", cond_clean, re.IGNORECASE)
+    if not tower_hp_m:
+        tower_hp_m = re.search(r"(?:<|below|under|less\s*than|<=)\s*~?\s*(\d+)\s*(?:hp|health)", cond_clean, re.IGNORECASE)
     if tower_hp_m:
         cond["max_tower_hp"] = int(tower_hp_m.group(1))
 
     # 4. Tower HP percentage threshold (e.g. "less than its 10% of its initial HP")
-    tower_pct_m = re.search(r"(?:tower|hp).*?(?:<|below|under|less\s*than|<=)?\s*(\d+)\s*%", cond_clean, re.IGNORECASE)
+    tower_pct_m = re.search(r"(?:tower|hp|health).*?(?:<|below|under|less\s*than|<=)?\s*(\d+)\s*%", cond_clean, re.IGNORECASE)
     if tower_pct_m:
         cond["max_tower_hp_pct"] = int(tower_pct_m.group(1))
 
-    # 5. Enemy Cards
-    if not is_friendly:
-        e_cards = find_all_cards_in_text(cond_clean)
-        if e_cards:
-            cond["enemy_cards"] = e_cards
-            if any(c in ["giant", "pekka", "hog_rider"] for c in e_cards):
-                cond["enemy_tank"] = True
-            if any(c in ["skeletons", "archers"] for c in e_cards):
-                cond["enemy_swarm"] = True
+    # 5. Enemy Cards & Classifications
+    if e_cards:
+        cond["enemy_cards"] = e_cards
+        if any(c in ["giant", "pekka", "hog_rider"] for c in e_cards):
+            cond["enemy_tank"] = True
+        if any(c in ["skeletons", "archers"] for c in e_cards):
+            cond["enemy_swarm"] = True
 
-    if re.search(r"\b(?:heavy\s*tank|tank|golem)\b", cond_clean, re.IGNORECASE):
+    if re.search(r"\b(?:heavy\s*tank|tank|golem|ground\s*tank)\b", cond_clean, re.IGNORECASE):
         cond["enemy_tank"] = True
-    if re.search(r"\b(?:swarm|skarmy)\b", cond_clean, re.IGNORECASE):
+    if re.search(r"\b(?:swarm|skarmy|fragile\s*ranged)\b", cond_clean, re.IGNORECASE):
         cond["enemy_swarm"] = True
 
     if "left" in c_low:
@@ -110,16 +153,24 @@ def parse_tactical_trigger_rule(raw_line: str) -> Dict[str, Any]:
         cond["enemy_right"] = True
     if re.search(r"\b(?:clear|open|undefended)\b", cond_clean, re.IGNORECASE):
         cond["lane_clear"] = True
-    if re.search(r"(?:crosses\s+the\s+bridge|across\s+the\s+bridge|after\s+it\s+crosses|bridge)", cond_clean, re.IGNORECASE):
+    if re.search(r"(?:crosses\s+the\s+bridge|across\s+the\s+bridge|after\s+it\s+crosses|crosses\s+bridge)", clean_line, re.IGNORECASE):
         cond["cross_bridge"] = True
 
     # ACTION PARSING
     action: Dict[str, Any] = {}
-    action_cards = find_all_cards_in_text(action_text)
-    if action_cards:
-        action["card"] = action_cards[0]
-        if len(action_cards) > 1:
-            action["secondary_card"] = action_cards[1]
+    all_action_cards = find_all_cards_in_text(action_text)
+
+    # Filter out cards that are targets of the action (e.g., "onto enemy hog rider")
+    deployment_cards = [c for c in all_action_cards if not _is_card_target_reference(c, action_text)]
+
+    # Fallback: if all were considered target references, use the first card mentioned
+    if not deployment_cards and all_action_cards:
+        deployment_cards = all_action_cards
+
+    if deployment_cards:
+        action["card"] = deployment_cards[0]
+        if len(deployment_cards) > 1:
+            action["secondary_card"] = deployment_cards[1]
 
     act_low = action_text.lower()
     if "opposite" in act_low or "counter" in act_low:
@@ -186,7 +237,7 @@ class ClashSkillProfile:
 
     def generate_system_prompt(self, team_color: str) -> str:
         deck_str = ", ".join([f"{CARD_CATALOG[c]['name']} ({c}: {CARD_CATALOG[c]['elixir']}e)" for c in self.deck if c in CARD_CATALOG])
-        triggers_str = "\n".join([f"- Rule: {t}" for t in self.triggers[:4]]) if self.triggers else "- Manage elixir carefully and defend lanes"
+        triggers_str = "\n".join([f"- Rule: {t}" for t in self.triggers]) if self.triggers else "- Manage elixir carefully and defend lanes"
 
         prompt = f"""You are the Autonomous Commander of {self.name} playing {team_color.upper()} in Clash Royale 1v1 Arena!
 War Cry: "{self.war_cry}"

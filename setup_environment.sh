@@ -19,6 +19,6 @@ if command -v ollama &>/dev/null; then
 fi
 
 echo "Running tests..."
-.venv/bin/python -m unittest tests/test_game.py
+.venv/bin/python -m unittest discover tests -v
 
 echo "Setup complete. You can run ./start_game.sh"

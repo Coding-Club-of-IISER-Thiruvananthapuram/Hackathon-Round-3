@@ -2254,11 +2254,18 @@ async function handleSkillFileUpload(file, side) {
   reader.onload = async (evt) => {
     try {
       const content = evt.target.result;
-      let filename = file.name.replace(/\s+/g, '_');
-      if (!filename.endsWith('.md') && !filename.endsWith('.txt')) {
-        filename += '.md';
-      } else if (filename.endsWith('.txt')) {
-        filename = filename.slice(0, -4) + '.md';
+      let rawName = file.name.replace(/\s+/g, '_');
+      if (!rawName.endsWith('.md') && !rawName.endsWith('.txt')) {
+        rawName += '.md';
+      } else if (rawName.endsWith('.txt')) {
+        rawName = rawName.slice(0, -4) + '.md';
+      }
+
+      // Keep Red and Blue uploads cleanly separated to prevent one side from accidentally overwriting the other
+      const sidePrefix = side.toLowerCase() + '_';
+      let filename = rawName;
+      if (!filename.toLowerCase().startsWith('red_') && !filename.toLowerCase().startsWith('blue_')) {
+        filename = `${sidePrefix}${rawName}`;
       }
 
       const res = await fetch('/api/skills/save', {
@@ -2843,6 +2850,32 @@ async function startBattle() {
     victoryModalDismissed = false;
     const modal = document.getElementById('victoryModal');
     if (modal) modal.classList.remove('active');
+
+    // If match is not initialized or finished, automatically setup using currently selected skills
+    if (!currentMatchState || currentMatchState.status === 'not_started' || currentMatchState.status === 'finished' || currentMatchState.status === 'not_initialized') {
+      const elSelectRed = document.getElementById('selectRedSkill');
+      const elSelectBlue = document.getElementById('selectBlueSkill');
+      const elSelectTimer = document.getElementById('selectTimer');
+      const redSkill = elSelectRed?.value || 'hog_cycle.md';
+      const blueSkill = elSelectBlue?.value || 'giant_beatdown.md';
+      const timerSecs = elSelectTimer ? parseInt(elSelectTimer.value, 10) : 180;
+
+      const setupRes = await fetch('/api/match/setup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          red_skill_file: redSkill,
+          blue_skill_file: blueSkill,
+          max_duration_seconds: timerSecs
+        })
+      });
+      if (!setupRes.ok) {
+        const err = await setupRes.json();
+        alert(`Setup error: ${err.detail || 'Could not load match'}`);
+        return;
+      }
+    }
+
     await fetch('/api/match/start', { method: 'POST' });
     playClashSound('crown');
   } catch (e) {

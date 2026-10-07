@@ -150,6 +150,7 @@ class LLMCommander:
 
         from engine.skill_loader import detect_card_from_text
 
+        metrics["opp_troops_crossed_bridge"] = []
         opp_tr_m = re.search(r"Enemy Incoming Troops:\s*\d+\s*\((.*?)\)", brief)
         if opp_tr_m:
             items = [t.strip() for t in opp_tr_m.group(1).split(",") if t.strip() and t.strip() != "None"]
@@ -158,6 +159,8 @@ class LLMCommander:
                 card = detect_card_from_text(it)
                 if card:
                     metrics[f"opp_troops_{lane}"].append(card)
+                    if "crossed bridge" in it.lower():
+                        metrics["opp_troops_crossed_bridge"].append((card, lane))
 
         my_tr_m = re.search(r"Your Active Troops:\s*\d+\s*\((.*?)\)", brief)
         if my_tr_m:
@@ -269,25 +272,44 @@ class LLMCommander:
 
             # Enemy Tank check
             if cond_met and cond.get("enemy_tank"):
-                tank_lanes = []
-                for ln in ["left", "right"]:
-                    if any(c in ["giant", "pekka", "hog_rider"] for c in metrics.get(f"opp_troops_{ln}", [])):
-                        tank_lanes.append(ln)
-                if not tank_lanes:
-                    cond_met = False
-                else:
-                    threat_lane = tank_lanes[0]
+                if not cond.get("enemy_cards"):
+                    tank_lanes = []
+                    for ln in ["left", "right"]:
+                        if any(c in ["giant", "pekka", "hog_rider"] for c in metrics.get(f"opp_troops_{ln}", [])):
+                            tank_lanes.append(ln)
+                    if metrics.get("last_opp_card") in ["giant", "pekka", "hog_rider"]:
+                        tank_lanes.append(metrics.get("last_opp_lane", preferred_lane))
+                    if not tank_lanes:
+                        cond_met = False
+                    else:
+                        threat_lane = tank_lanes[0]
 
             # Enemy Swarm check
             if cond_met and cond.get("enemy_swarm"):
-                swarm_lanes = []
-                for ln in ["left", "right"]:
-                    if any(c in ["skeletons", "archers"] for c in metrics.get(f"opp_troops_{ln}", [])):
-                        swarm_lanes.append(ln)
-                if not swarm_lanes:
+                if not cond.get("enemy_cards"):
+                    swarm_lanes = []
+                    for ln in ["left", "right"]:
+                        if any(c in ["skeletons", "archers"] for c in metrics.get(f"opp_troops_{ln}", [])):
+                            swarm_lanes.append(ln)
+                    if metrics.get("last_opp_card") in ["skeletons", "archers"]:
+                        swarm_lanes.append(metrics.get("last_opp_lane", preferred_lane))
+                    if not swarm_lanes:
+                        cond_met = False
+                    else:
+                        threat_lane = swarm_lanes[0]
+
+            # Cross Bridge check (e.g. "after it crosses the bridge")
+            if cond_met and cond.get("cross_bridge"):
+                has_crossed = False
+                for c_item, l_item in metrics.get("opp_troops_crossed_bridge", []):
+                    if threat_lane is None or l_item == threat_lane:
+                        if not cond.get("enemy_cards") or c_item in cond.get("enemy_cards", []):
+                            has_crossed = True
+                            threat_lane = l_item
+                            break
+                # If enemy troops are on the board but haven't reached our bridge half yet, hold response
+                if not has_crossed and (metrics.get("opp_troops_left") or metrics.get("opp_troops_right")):
                     cond_met = False
-                else:
-                    threat_lane = swarm_lanes[0]
 
             # Friendly Card check (e.g. "our PEKKA is deployed")
             if cond_met and "friendly_card" in cond:
@@ -376,7 +398,7 @@ class LLMCommander:
                     return {
                         "card": "none",
                         "lane": threat_lane or preferred_lane,
-                        "thought": f"Saving elixir ({elixir:.1f}/{cost}e) for Directive: \"{raw_text}\".",
+                        "thought": f"Directive Saving Elixir ({elixir:.1f}/{cost}e) for: \"{raw_text}\".",
                         "taunt": ""
                     }
 
@@ -520,7 +542,7 @@ class LLMCommander:
         tactical_order = self._tactical_heuristics(skill, brief)
         deck = [c for c in skill.deck if c in CARD_CATALOG]
 
-        if not text or "ERROR:" in text:
+        if not text or "ERROR:" in text or "OFFLINE:" in text:
             return tactical_order
 
         clean_text = text.strip()
@@ -544,8 +566,8 @@ class LLMCommander:
 
         result = {}
 
-        # Explicit tactical directive priority: if a participant's rule triggered, preserve it
-        if tactical_order.get("thought", "").startswith("Directive Triggered:"):
+        # Explicit tactical directive priority: if a participant's rule triggered or is saving for counter, strictly preserve it
+        if tactical_order.get("thought", "").startswith("Directive"):
             result["thought"] = tactical_order["thought"]
             result["card"] = tactical_order["card"]
             result["lane"] = tactical_order["lane"]
@@ -585,6 +607,8 @@ class LLMCommander:
         return result
 
     def _heuristic_fallback(self, text: str, skill: ClashSkillProfile, default: Dict[str, Any]) -> Dict[str, Any]:
+        if default.get("thought", "").startswith("Directive"):
+            return default
         res = dict(default)
         t_low = text.lower()
         deck = [c for c in skill.deck if c in CARD_CATALOG]

@@ -306,6 +306,9 @@ def simulate_rollout(req: RolloutSimRequest):
     num_sims = max(1, min(100, req.num_simulations))
     results = {"num_simulations": num_sims, "red_wins": 0, "blue_wins": 0, "draws": 0, "total_duration": 0.0, "matches": []}
 
+    from engine.llm_commander import LLMCommander
+    commander = LLMCommander()
+
     for i in range(num_sims):
         sim_state = ClashGameState(max_duration_seconds=req.max_duration_seconds)
         sim_state.players["red"].name = red_profile.name
@@ -317,10 +320,10 @@ def simulate_rollout(req: RolloutSimRequest):
         sim_state.status = "running"
 
         while sim_state.status == "running" and sim_state.elapsed_seconds < req.max_duration_seconds:
-            red_card = red_profile.deck[sim_state.round_number % len(red_profile.deck)] if red_profile.deck else "knight"
-            blue_card = blue_profile.deck[sim_state.round_number % len(blue_profile.deck)] if blue_profile.deck else "archers"
-            red_order = {"card": red_card, "lane": red_profile.preferred_lane}
-            blue_order = {"card": blue_card, "lane": blue_profile.preferred_lane}
+            red_brief = sim_state.get_situational_brief("red")
+            blue_brief = sim_state.get_situational_brief("blue")
+            red_order = commander._tactical_heuristics(red_profile, red_brief)
+            blue_order = commander._tactical_heuristics(blue_profile, blue_brief)
             simulator.execute_round(red_order, blue_order, round_delta_seconds=1.0)
 
         winner = sim_state.winner
